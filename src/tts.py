@@ -62,5 +62,5 @@ class Tts():
         try:
             return json.loads(stdout).get('filename')
         except Exception as e:
-            self._tts_log("error on deserialisation: {}".format(e))
+            self._tts_log("error on deserialization: {}".format(e))
             return None
