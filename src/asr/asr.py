@@ -47,6 +47,7 @@ class Asr:
                 self.startRecord(filename)
                 self.sleep_ms(fragment_duration_ms)
                 self.stopRecord()
+        # TODO: stop recording if recognize result has already been given
         Thread(target=record).start()
 
 
