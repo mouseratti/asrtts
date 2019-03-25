@@ -13,6 +13,6 @@ def get_recognition_config() -> types.RecognitionConfig:
 def get_streaming_recognition_config(config: types.RecognitionConfig) -> types.StreamingRecognitionConfig:
     return types.StreamingRecognitionConfig(
         config=config,
-        single_utterance=True,
+        single_utterance=False,
         interim_results=False,
     )

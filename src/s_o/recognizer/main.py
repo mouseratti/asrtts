@@ -1,29 +1,37 @@
 import json
+from typing import List, Generator, ByteString
 from collections import namedtuple
-from sys import exit
 
 from google.cloud import speech
 from google.cloud.speech import types
 
-from s_o.recognizer.configs import get_recognition_config, get_streaming_recognition_config
+from s_o.recognizer.tts_configs import get_recognition_config, get_streaming_recognition_config
 from s_o.recognizer.iofunctions import read_files, get_files_from_directory
 from s_o.recognizer.log import configure_log
-from s_o.recognizer.params import get_params, set_environment_variables
+from s_o.recognizer.params import get_params
+from s_o.recognizer.timeouts import Timeout
 
 logger = configure_log()
 
-RecognitionResult = namedtuple("RecognitionResult", ("PHRASE", "CONFIDENCE", "ERROR"))
+RecognitionResult = namedtuple("RecognitionResult", ("PHRASE", "CONFIDENCE"))
 
 
-def recognize_stream(stream_generator, client, recognition_config):
+def recognize_stream(
+        bytestream: Generator[ByteString, None, None],
+        client:speech.SpeechClient,
+        recognition_config: types.StreamingRecognitionConfig,
+        max_duration_millis = 10000,
+        next_phrase_timeout_millis = 3000,
+    ) -> Generator[types.SpeechRecognitionAlternative, None, None]:
     """Streams transcription of the given audio file."""
-    result = None
-    requests = (types.StreamingRecognizeRequest(audio_content=chunk) for chunk in stream_generator)
+    requests = (types.StreamingRecognizeRequest(audio_content=chunk) for chunk in bytestream)
     responses = client.streaming_recognize(
         get_streaming_recognition_config(recognition_config),
         requests
     )
-    while True:
+    max_duration_timeout = Timeout(max_duration_millis)
+    next_phrase_timeout = Timeout(next_phrase_timeout_millis, start_now=False)
+    while not (max_duration_timeout.is_timeout or next_phrase_timeout.is_timeout):
         try:
             resp = next(responses)
         except StopIteration:
@@ -33,51 +41,40 @@ def recognize_stream(stream_generator, client, recognition_config):
         if resp.results:
             final = [x for x in resp.results if x.is_final]
             if final:
-                result = final[0].alternatives
-                logger.info("result set to {}".format(result))
-                break
-    if result is None: logger.warning("recognize_stream result is None!!!")
-    return result
+                try:
+                    next_phrase_timeout.restart()
+                    yield final[0].alternatives[0]
+                except IndexError:
+                    logger.warning("no any SpeechRecognitionAlternative for response {}".format(resp.results))
+    logger.info("recognize_stream timed out...")
 
 
-def build_result(*args) -> RecognitionResult:
-    logger.debug(args)
-    if 3 == len(args):
-        return RecognitionResult(*args)
-    if 1 == len(args):
-        result = args[0]
-        if result is None: return RecognitionResult(None, 0, None)
-        most_likely = result[0]
-        return RecognitionResult(most_likely.transcript, most_likely.confidence, None)
-
+def format_recognition_result(args: List[types.SpeechRecognitionAlternative]) -> RecognitionResult:
+    phrase = " ".join(arg.transcript for arg in args)
+    confidence = sum(arg.confidence for arg in args) / len(args)
+    return RecognitionResult(phrase, confidence)
 
 def to_json(r: RecognitionResult) -> str:
-    output_dict = {"PHRASE": r.PHRASE, "CONFIDENCE": r.CONFIDENCE, "ERROR": r.ERROR}
+    output_dict = {"PHRASE": r.PHRASE, "CONFIDENCE": r.CONFIDENCE}
     return json.dumps(output_dict)
 
 
 def main():
-    set_environment_variables()
-    params = get_params()
-    logger.info("start new session! directory {}".format(params.directory))
-    counter = 0
     try:
+        params = get_params()
+        logger.debug("start new session! params {}".format(params))
         google_client = speech.SpeechClient()
-        while counter < 5:
-            recognized = recognize_stream(
-                read_files(get_files_from_directory(params.directory)),
-                google_client,
-                get_recognition_config()
-            )
-            if recognized: break
-            counter += 1
-            logger.debug("recognized is None, repeating...")
-        result = build_result(recognized)
-        logger.debug("build_result is {}".format(result))
+        alternatives_list: List[types.SpeechRecognitionAlternative] = recognize_stream(
+            read_files(get_files_from_directory(params.directory)),
+            google_client,
+            get_streaming_recognition_config(get_recognition_config()),
+            params.duration,
+            params.next_phrase_timeout
+        )
+        result = format_recognition_result([_ for _ in alternatives_list])
+        jsoned = to_json(result)
+        logger.debug("result is {}".format(jsoned))
+        print(jsoned)
     except Exception as e:
         logger.exception("error on recognize", exc_info=True)
-        result = build_result(None, None, str(e))
-
-    jsoned = to_json(result)
-    print(jsoned)
-    if result.ERROR is not None: exit(7)
+        raise Exception

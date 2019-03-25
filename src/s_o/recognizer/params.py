@@ -1,21 +1,51 @@
+import yaml
 import argparse
-import os
+from typing import IO
 from collections import namedtuple
-from pathlib import Path
 
 Params = namedtuple("Params",
                     (
                         "directory",
                         "confidence_threshold",
+                        "duration",
+                        "next_phrase_timeout",
+                    ))
+
+Configuration = namedtuple("Configuration",
+                    (
+                        "confidence_threshold",
+                        "duration",
+                        "next_phrase_timeout",
                     ))
 
 
+class WrongConfigurationError(RuntimeError): pass
+
 def get_params() -> Params:
-    confidence_threshold = float(os.getenv("RECOGNIZER_CONFIDENCE_THRESHOLD", 0.4))
     parser = get_parser()
     parsed_args = parser.parse_args()
     directory = parsed_args.directory
-    return Params(directory, confidence_threshold)
+    with open(parsed_args.configfile) as file:
+        configuration: Configuration = parse_config(file)
+    return Params(
+        directory,
+        configuration.confidence_threshold,
+        configuration.duration,
+        configuration.next_phrase_timeout,
+        )
+
+
+def parse_config(file: IO) -> Configuration:
+    keys_from_yaml: dict = yaml.safe_load(file)
+    cfg: Configuration = Configuration(
+        keys_from_yaml.get("confidence_threshold"),
+        keys_from_yaml.get("duration"),
+        keys_from_yaml.get("next_phrase_timeout"),
+    )
+    for elem in cfg:
+        if elem is None: raise WrongConfigurationError("{} has undefined elements!!!".format(cfg))
+    return cfg
+
 
 
 def get_parser() -> argparse.ArgumentParser:
@@ -31,8 +61,12 @@ def get_parser() -> argparse.ArgumentParser:
         required=True,
         help='directory with files for recognition'
     )
+    parser.add_argument(
+        '-c',
+        dest='configfile',
+        metavar='configfile',
+        type=str,
+        required=True,
+        help='recognition config'
+    )
     return parser
-
-
-def set_environment_variables():
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.path.join(Path.home(), "gac.json")
