@@ -33,7 +33,7 @@ def get_files_from_directory(directory: str) -> Generator[IO, None, None]:
 
 def _get_next_filename(directory: str, timeout=2000) -> Generator[str, None, None]:
     def reset_timeout(): return 0
-    def make_fullname(f): path.join(directory, f)
+    def make_fullname(f): return path.join(directory, f)
     processed = set()
     timeout_per_file = reset_timeout()
     while True:

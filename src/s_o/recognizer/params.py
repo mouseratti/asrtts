@@ -6,14 +6,12 @@ from collections import namedtuple
 Params = namedtuple("Params",
                     (
                         "directory",
-                        "confidence_threshold",
                         "duration",
                         "next_phrase_timeout",
                     ))
 
 Configuration = namedtuple("Configuration",
                     (
-                        "confidence_threshold",
                         "duration",
                         "next_phrase_timeout",
                     ))
@@ -29,7 +27,6 @@ def get_params() -> Params:
         configuration: Configuration = parse_config(file)
     return Params(
         directory,
-        configuration.confidence_threshold,
         configuration.duration,
         configuration.next_phrase_timeout,
         )
@@ -38,7 +35,6 @@ def get_params() -> Params:
 def parse_config(file: IO) -> Configuration:
     keys_from_yaml: dict = yaml.safe_load(file)
     cfg: Configuration = Configuration(
-        keys_from_yaml.get("confidence_threshold"),
         keys_from_yaml.get("duration"),
         keys_from_yaml.get("next_phrase_timeout"),
     )

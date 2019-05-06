@@ -1,1 +1,1 @@
-Santechnika-online asr\tts adapter
+Santechnika-online recognition\tts adapter
