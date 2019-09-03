@@ -15,4 +15,3 @@ func FormatOutput(filename string) (result string, e error) {
 	result = string(jsoned)
 	return
 }
-

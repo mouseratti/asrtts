@@ -5,6 +5,7 @@ import (
 	"context"
 	texttospeechpb "google.golang.org/genproto/googleapis/cloud/texttospeech/v1"
 )
+
 func Convert(text string) (AudioContent, error) {
 	req := texttospeechpb.SynthesizeSpeechRequest{
 		Input: &texttospeechpb.SynthesisInput{
@@ -19,7 +20,7 @@ func Convert(text string) (AudioContent, error) {
 			SampleRateHertz: 8000,
 		},
 	}
-	ctx:= context.Background()
+	ctx := context.Background()
 	ttsClient, err := texttospeech.NewClient(ctx)
 	if err != nil {
 		return nil, err

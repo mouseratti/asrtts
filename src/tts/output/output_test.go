@@ -4,7 +4,6 @@ import (
 	"testing"
 )
 
-
 func TestFormatOutput(t *testing.T) {
 	type args struct {
 		filename string

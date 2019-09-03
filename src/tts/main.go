@@ -9,16 +9,16 @@ import (
 	"tts/output"
 	"tts/translation"
 )
+
 type args struct {
 	outputDirectory string
 	phrase          string
-	debug bool
+	debug           bool
 }
-
 
 func main() {
 	defer func() {
-		if r:= recover(); r != nil {
+		if r := recover(); r != nil {
 			fmt.Println(r)
 			os.Exit(8)
 		}
@@ -50,19 +50,15 @@ func main() {
 	}
 }
 
-
 func parseArgs() args {
-	phrase:= kingpin.Arg("phrase", "phrase to translate").Required().String()
-	dir :=  kingpin.Flag("dir", "output directory").Required().String()
-	debug :=  kingpin.Flag("debug", "debug").Short('d').Bool()
+	phrase := kingpin.Arg("phrase", "phrase to translate").Required().String()
+	dir := kingpin.Flag("dir", "output directory").Required().String()
+	debug := kingpin.Flag("debug", "debug").Short('d').Bool()
 	kingpin.Parse()
 	return args{*dir, *phrase, *debug}
 }
-
 
 func getFileName(directory string) string {
 	uidv4 := uuid.NewV4()
 	return fmt.Sprintf("%v/%v.raw", directory, uidv4.String())
 }
-
-
