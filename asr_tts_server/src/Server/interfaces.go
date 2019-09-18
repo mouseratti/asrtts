@@ -1,17 +1,10 @@
 package Server
 
-type ConnectionHandler interface {
-	Handle(Connection)
-}
-
-type Server interface {
-	Listen(Socket)
-}
 
 type Socket interface {
 	GetHost() Host
 	GetPort() Port
-	Pass()
+	AsString() string
 }
 
 type Stream string

@@ -1,12 +1,14 @@
 package main
 
 import (
-	"./Server"
-
+	"Server"
+	"handlers/echo"
+	//"protocols/tcp"
 )
 
 func main() {
 	server := Server.GetServer()
-	socket := Server.GetSocket(Server.Host("0.0.0.0"), Server.Port(8080))
-	server.Listen(socket)
+	server.AddHandler(echo.GetHandler())
+	//server.AddProtocol(tcp.g)
+	server.Start()
 }
